@@ -3,8 +3,8 @@
 const CACHE = 'inspector-lupa-v2.1';
 const ARCHIVOS = [
   './', './index.html', './manifest.webmanifest',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png',
-  './fonts/fredoka-latin-500-normal.woff2', './fonts/fredoka-latin-700-normal.woff2', './fonts/patrick-hand-latin-400-normal.woff2'
+  './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png',
+  './fredoka-latin-500-normal.woff2', './fredoka-latin-700-normal.woff2', './patrick-hand-latin-400-normal.woff2'
 ];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
