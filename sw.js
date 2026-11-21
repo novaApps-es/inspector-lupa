@@ -1,6 +1,6 @@
 /* Inspector Lupa — modo sin conexión.
    Al publicar una versión nueva, cambia el número de CACHE para que los móviles la descarguen. */
-const CACHE = 'inspector-lupa-v2.1';
+const CACHE = 'inspector-lupa-v2.2';
 const ARCHIVOS = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png',
