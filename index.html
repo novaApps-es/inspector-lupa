@@ -136,7 +136,31 @@ button{font:inherit;cursor:pointer;border:none;color:inherit}
 .pickO{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0}
 .pickO button{background:#eef3f6;border-radius:20px;padding:8px 14px;font-weight:700;border:3px solid transparent;min-height:44px}
 .msg{font-size:17px}
-@media(max-width:600px){.top b{font-size:16px}.top .tt{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.clues{font-size:19px}.decl q{font-size:18px}}
+/* MÓVIL (v2.2): sin ilustración y todo más compacto para no tener que subir y bajar tanto */
+@media(max-width:600px),(max-height:500px){
+ .scene{display:none}
+ .cw{gap:10px;padding:8px 8px 28px}
+ .top{padding:6px 8px;gap:6px}.top b{font-size:15px}.top small{font-size:11px}
+ .top .tt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .icb,.pista{height:40px}.icb{width:40px}#cEst{font-size:16px;letter-spacing:0}
+ .paper{padding:10px 12px}.story{border-left-width:6px}.story h3{font-size:18px;margin-bottom:4px}.story p{font-size:15px;line-height:1.4}
+ .diario{font-size:16px;padding:4px 10px;margin-bottom:8px!important}.regla{font-size:14px;padding:6px 8px;margin-top:8px}
+ .secT{font-size:17px;margin:12px 2px 6px}.secT small{font-size:12px}
+ .plano{padding:8px;gap:4px}.plano .pst,.plano .ent{font-size:14px;padding:3px 8px}
+ .sus{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+ .card{padding:6px 3px;box-shadow:0 3px 0 #b9c9d1}.card svg{width:48px;height:48px;margin-bottom:2px}
+ .card b{font-size:13px}.card small{font-size:11px}.card .tr{font-size:11px;margin-top:1px}
+ .card.off::after{font-size:60px}
+ .decl{gap:6px}.decl li{padding:6px 10px;gap:8px;box-shadow:0 3px 0 #b9c9d1}.decl svg{width:34px;height:34px}.decl b{font-size:12px}.decl q{font-size:17px}
+ .clues{font-size:18px;line-height:30px;padding:6px 10px 6px 38px;background:var(--paper) repeating-linear-gradient(transparent 0 29px,var(--line) 29px 30px) 0 6px}
+ .clues::before{left:26px}
+ .gBox{margin:0 6px 10px 0}.gHead{font-size:14px;margin-bottom:4px}.borrar{min-height:34px;padding:4px 10px;font-size:13px}
+ .grid th{font-size:11px;padding:4px 2px}.grid th.rn{padding-left:6px}.grid td button{width:40px;height:38px;font-size:20px}
+ .acc{margin-top:10px}.acc .btn{font-size:20px;padding:12px 36px}
+ .hintRow{padding:6px 10px;gap:8px}.dig span{width:32px;height:38px;font-size:22px}.dig span svg{width:24px;height:24px}.hintRow p{font-size:17px}
+ .safe{padding:14px;gap:8px}.wheel span{width:52px;height:62px;font-size:38px}.wheel span svg{width:36px;height:36px}.wheel button{width:48px;height:40px}
+ .pickS{grid-template-columns:repeat(auto-fill,minmax(78px,1fr))}.pickS button svg{width:42px;height:42px}
+}
 </style>
 </head>
 <body>
@@ -163,7 +187,7 @@ button{font:inherit;cursor:pointer;border:none;color:inherit}
     <button class="btn sec" id="instalar">Instalar en este dispositivo</button>
   </div>
   <div id="iosTip">Para instalarlo en el iPhone o iPad: pulsa <b>Compartir</b> en Safari y elige <b>«Añadir a pantalla de inicio»</b>.</div>
-  <div class="ver">Inspector Lupa v2.1 · NovaApps</div>
+  <div class="ver">Inspector Lupa v2.2 · NovaApps</div>
 </section>
 
 <section id="map" class="screen">
@@ -188,7 +212,7 @@ button{font:inherit;cursor:pointer;border:none;color:inherit}
 
 <script>
 {
-const VERSION='2.1';
+const VERSION='2.2';
 const $=id=>document.getElementById(id);
 
 /* ================= AZAR CON SEMILLA ================= */
@@ -671,7 +695,7 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();aviso=e;$('
 $('instalar').onclick=async()=>{if(!aviso)return;aviso.prompt();try{await aviso.userChoice;}catch(e){}aviso=null;$('instalar').style.display='none';};
 window.addEventListener('appinstalled',()=>{$('instalar').style.display='none';});
 const esIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-if(esIOS&&!standalone)$('iosTip').style.display='block';
+if(esIOS&&!standalone&&window.self===window.top)$('iosTip').style.display='block';
 }
 </script>
 </body>
