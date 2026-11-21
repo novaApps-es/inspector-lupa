@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#17323f">
+<title>Inspector Lupa</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Inspector Lupa">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<style>
+@font-face{font-family:"Fredoka";font-weight:500;font-display:swap;src:url(fonts/fredoka-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Fredoka";font-weight:700;font-display:swap;src:url(fonts/fredoka-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Patrick Hand";font-weight:400;font-display:swap;src:url(fonts/patrick-hand-latin-400-normal.woff2) format("woff2")}
+/* VOICE: juego de detective de pueblo, amable y con humor; pistas a mano en la libreta
+   IDEA: la mesa del inspector: carpeta del caso, fichas de sospechosos, libreta cuadriculada
+   PICTURE: escena ilustrada del lugar del suceso (de día en Villaluz, de noche en la feria) y retratos por código
+   COLOUR and TYPE: mesa azul petróleo (de noche, violeta), papel blanco, mostaza y rojo de marcador; Fredoka + Patrick Hand
+   LAYOUT: escena arriba a todo el ancho; en tablet horizontal, caso a la izquierda y pistas + libreta a la derecha */
+:root{--desk:#17323f;--desk2:#21485a;--paper:#fdfcf8;--ink:#1d2b33;--line:#cfe0ea;--mos:#f2b134;--rojo:#d64933;--verde:#2f9e6e;--gris:#8a9aa3;--boton:#2c5a6e}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html{min-height:100%;background:radial-gradient(circle at 30% 0,var(--desk2),var(--desk) 900px) var(--desk)}
+body{margin:0;color:var(--ink);font:16px/1.45 "Fredoka","Trebuchet MS",system-ui,sans-serif;overflow-x:clip}
+:root.noche{--desk:#140f2e;--desk2:#3b2d6b;--boton:#4a3d86}
+button{font:inherit;cursor:pointer;border:none;color:inherit}
+.screen{display:none;min-height:100vh}.screen.on{display:block}
+.btn{background:var(--mos);color:#3a2600;font-weight:700;font-size:18px;padding:12px 26px;border-radius:14px;box-shadow:0 4px 0 #b37a12;min-height:44px}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #b37a12}
+.btn.sec{background:#e7eef2;color:var(--ink);box-shadow:0 4px 0 #9fb2bd}
+.btn.rojo{background:var(--rojo);color:#fff;box-shadow:0 4px 0 #8e2a1c}
+.btn:disabled{opacity:.45;cursor:default}
+/* MENÚ */
+#menu{text-align:center;padding:40px 16px;color:#fff}
+#menu svg{width:min(240px,56vw);height:auto;filter:drop-shadow(0 12px 18px rgba(0,0,0,.35))}
+#menu h1{font-size:clamp(42px,10vw,68px);line-height:1.05;margin:8px 0 4px;color:var(--mos);text-shadow:0 4px 0 #8a5a00}
+#menu p{margin:0 0 22px;color:#cfe0ea;font-size:18px}
+#menu .col{display:flex;flex-direction:column;align-items:center;gap:14px}
+#instalar{display:none}#iosTip{display:none;max-width:360px;margin:6px auto 0;font-size:15px;color:#cfe0ea;background:rgba(255,255,255,.08);border-radius:12px;padding:10px 14px}
+#menu .ver{margin-top:28px;font-size:13px;color:#8fb0c0}
+/* MAPA */
+#map{padding:18px 14px 40px;color:#fff}
+.mapTop{display:flex;justify-content:space-between;align-items:center;max-width:900px;margin:0 auto}
+.tabs{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0 4px}
+.tab{padding:10px 18px;border-radius:12px;background:var(--boton);color:#fff;font-weight:700;min-height:44px}
+.tab.on{background:var(--mos);color:#3a2600}
+.tab sup{background:var(--rojo);color:#fff;border-radius:6px;padding:0 5px;font-size:11px;margin-left:4px}
+#map h2{text-align:center;margin:10px 0 2px;font-size:32px;color:var(--mos)}
+#map .sub{text-align:center;color:#cfe0ea;margin:0 auto 18px;max-width:620px}
+#casos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 14px;max-width:900px;margin:0 auto}
+.carp{position:relative;background:#e9c98b;border-radius:4px 14px 10px 10px;padding:22px 12px 12px;text-align:left;color:#3a2600;min-height:118px;
+ box-shadow:0 6px 0 #a7834a,0 10px 18px rgba(0,0,0,.3)}
+.carp::before{content:"";position:absolute;top:-10px;left:0;width:56%;height:14px;background:inherit;border-radius:8px 8px 0 0}
+.carp b{display:block;font-size:20px}.carp small{display:block;color:#6e5226;font-size:13px;line-height:1.25}
+.carp .st{font-size:20px;color:#b08a4a;letter-spacing:2px;margin-top:6px}.carp .st i{font-style:normal;color:var(--rojo)}
+.carp.c2{background:#cdb9f5;box-shadow:0 6px 0 #7d63c0,0 10px 18px rgba(0,0,0,.35)}.carp.c2 small{color:#4b3787}
+.carp.lock{background:#8a9aa3;box-shadow:0 6px 0 #5d6b73;color:#3d4a51;cursor:default}.carp.lock small{color:#3d4a51}
+.carp.fin{background:#c7d8a8;box-shadow:0 6px 0 #7f9658}
+.carp.act{outline:3px solid var(--mos);outline-offset:3px}
+/* CASO */
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 12px;background:color-mix(in srgb,var(--desk) 94%,transparent);color:#fff;backdrop-filter:blur(4px)}
+.top .tt{flex:1;line-height:1.15}.top small{color:#b9cfe0;font-size:13px}.top b{display:block;font-size:19px}
+.icb{width:44px;height:44px;border-radius:12px;background:var(--boton);color:#fff;font-size:22px;font-weight:700;flex:none}
+#cEst{font-size:20px;letter-spacing:2px;color:#6d7f9f;white-space:nowrap}#cEst i{font-style:normal;color:var(--mos)}
+.pista{background:var(--boton);color:#fff;border-radius:12px;padding:0 14px;height:44px;font-weight:700;flex:none}
+.cw{max-width:1180px;margin:0 auto;padding:12px 12px 40px;display:grid;gap:16px}
+.scene{border-radius:16px;overflow:hidden;height:clamp(150px,25vw,250px);box-shadow:0 10px 24px rgba(0,0,0,.35);position:relative}
+.scene svg{width:100%;height:100%;display:block}
+@media(min-width:900px){.cw{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:start}.scene{grid-column:1/-1}.colR{position:sticky;top:76px}}
+.paper{background:var(--paper);border-radius:12px;padding:14px 16px;box-shadow:0 8px 18px rgba(0,0,0,.28)}
+.story{border-left:8px solid var(--rojo)}
+.story h3{margin:0 0 6px;font-size:22px}.story p{margin:0;font-size:17px}
+.diario{font-family:"Patrick Hand","Comic Sans MS",cursive;font-size:20px;line-height:1.3;color:#5b4636;background:#fff3cf;border-radius:8px;padding:6px 12px;margin:0 0 10px!important}
+.story .lugar{display:inline-block;margin-top:8px;background:#fde7a8;border-radius:8px;padding:3px 10px;font-weight:700}
+.regla{background:#fde7e3;border:2px dashed var(--rojo);border-radius:10px;padding:8px 10px;margin-top:10px;font-weight:700;color:#8e2a1c}
+.secT{color:#fff;margin:18px 2px 8px;font-size:20px}.secT small{color:#b9cfe0;font-size:13px;font-weight:500;margin-left:6px}
+.plano{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--paper);border-radius:12px;padding:10px 12px;box-shadow:0 8px 18px rgba(0,0,0,.28)}
+.plano .ent{background:var(--verde);color:#fff;border-radius:8px;padding:4px 10px;font-weight:700}
+.plano .pst{background:#fde7a8;border-radius:8px;padding:4px 10px;font-weight:700;white-space:nowrap}
+.plano i{color:var(--gris);font-style:normal;font-weight:700}
+.sus{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.card{background:var(--paper);border-radius:12px;padding:8px 6px 8px;text-align:center;position:relative;box-shadow:0 5px 0 #b9c9d1;transition:transform .15s}
+.card svg{width:78px;height:78px;border-radius:50%;display:block;margin:0 auto 4px}
+.card b{display:block;font-size:15px;line-height:1.1}.card small{display:block;color:#5d717b;font-size:13px;line-height:1.2}
+.card .tr{font-size:13px;color:#2f4b58;margin-top:3px;line-height:1.25}
+.card.off{opacity:.42;transform:scale(.96)}
+.card.off::after{content:"✕";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:96px;color:var(--rojo);font-weight:700;opacity:.9}
+.decl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.decl li{display:flex;gap:10px;align-items:center;background:var(--paper);border-radius:12px;padding:8px 12px;cursor:pointer;box-shadow:0 5px 0 #b9c9d1}
+.decl svg{width:48px;height:48px;border-radius:50%;flex:none}
+.decl b{font-size:14px;color:#5d717b}
+.decl q{display:block;font-family:"Patrick Hand","Comic Sans MS",cursive;font-size:20px;line-height:1.25}
+.decl li.tach q{text-decoration:line-through;color:#9aa8b0}
+.clues{margin:0;padding:8px 14px 8px 44px;background:var(--paper) repeating-linear-gradient(transparent 0 33px,var(--line) 33px 34px) 0 8px;
+ font-family:"Patrick Hand","Comic Sans MS",cursive;font-size:21px;line-height:34px;border-radius:12px;box-shadow:0 8px 18px rgba(0,0,0,.28);position:relative}
+.clues::before{content:"";position:absolute;left:30px;top:0;bottom:0;width:2px;background:#f0a7a0}
+.clues li{cursor:pointer;padding-left:4px}.clues li.tach{text-decoration:line-through;color:#9aa8b0}
+.note{overflow-x:auto}
+.gBox{display:inline-block;vertical-align:top;margin:0 10px 12px 0}
+.gHead{display:flex;justify-content:space-between;align-items:center;gap:10px;color:#fff;margin:0 2px 6px;font-weight:700}
+.borrar{background:var(--boton);color:#fff;border-radius:10px;padding:6px 14px;min-height:40px;font-weight:700;font-size:15px}
+.grid{border-collapse:collapse;background:var(--paper);border-radius:12px;overflow:hidden;box-shadow:0 8px 18px rgba(0,0,0,.28)}
+.grid th{font-size:13px;padding:6px 4px;background:#e7eef2;font-weight:700;text-align:center;line-height:1.1}
+.grid th.rn{text-align:left;padding-left:10px;white-space:nowrap}
+.grid td{border:1px solid #dfe7ec;padding:0}
+.grid td button{width:52px;height:46px;background:none;font-size:24px;font-weight:700;display:block}
+.grid td button.x{color:var(--rojo)}.grid td button.x.a{opacity:.5}.grid td button.ok{color:#fff;background:var(--verde)}
+.acc{display:flex;justify-content:center;margin-top:16px}.acc .btn{font-size:22px;padding:14px 44px}
+/* CANDADO */
+.lockBox{display:flex;flex-direction:column;align-items:center;gap:14px}
+.hintRow{display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:12px;padding:8px 14px;box-shadow:0 5px 0 #b9c9d1;width:min(580px,100%)}
+.dig{display:flex;gap:6px;flex:none}.dig span{width:40px;height:46px;border-radius:8px;background:#1d2b33;color:#fff;font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.dig span svg{width:30px;height:30px}
+.hintRow p{margin:0;font-family:"Patrick Hand",cursive;font-size:20px;line-height:1.2}
+.safe{background:linear-gradient(#5d6f78,#3c4a51);border-radius:22px;padding:22px 22px;box-shadow:inset 0 2px 0 rgba(255,255,255,.2),0 12px 26px rgba(0,0,0,.4);display:flex;gap:12px}
+.wheel{display:flex;flex-direction:column;align-items:center;gap:6px}
+.wheel button{width:56px;height:44px;border-radius:10px;background:#2b363c;color:var(--mos);font-size:22px}
+.wheel span{width:62px;height:76px;border-radius:12px;background:#111a1f;color:#ffe9a8;font-size:46px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 4px 10px #000}
+.wheel span svg{width:44px;height:44px}
+/* MODAL */
+#modal{position:fixed;inset:0;background:rgba(8,14,26,.62);display:none;align-items:center;justify-content:center;z-index:30;padding:14px}
+#modal.on{display:flex}
+#mbox{background:var(--paper);border-radius:18px;padding:18px;width:min(580px,100%);max-height:92vh;overflow:auto;text-align:center;box-shadow:0 18px 40px rgba(0,0,0,.45);animation:pop .2s ease-out}
+@keyframes pop{from{transform:scale(.85);opacity:0}}
+@media(prefers-reduced-motion:reduce){#mbox{animation:none}}
+#mbox h3{margin:0 0 8px;font-size:26px}#mbox h4{margin:12px 0 4px;font-size:19px}
+#mbox .bts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.estr{font-size:50px;letter-spacing:6px;color:#d5dde1}.estr i{font-style:normal;color:var(--mos)}
+.pickS{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin:8px 0}
+.pickS button{background:#eef3f6;border-radius:12px;padding:6px 4px;font-size:13px;font-weight:700;border:3px solid transparent;min-height:44px}
+.pickS button svg{width:56px;height:56px;border-radius:50%;display:block;margin:0 auto 2px}
+.pickS button.sel,.pickO button.sel{border-color:var(--rojo);background:#fde7e3}
+.pickO{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0}
+.pickO button{background:#eef3f6;border-radius:20px;padding:8px 14px;font-weight:700;border:3px solid transparent;min-height:44px}
+.msg{font-size:17px}
+@media(max-width:600px){.top b{font-size:16px}.top .tt{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.clues{font-size:19px}.decl q{font-size:18px}}
+</style>
+</head>
+<body>
+
+<section id="menu" class="screen on">
+  <svg viewBox="0 0 200 200" aria-hidden="true">
+    <ellipse cx="100" cy="186" rx="62" ry="8" fill="rgba(0,0,0,.3)"/>
+    <rect x="122" y="118" width="22" height="64" rx="10" transform="rotate(-35 133 150)" fill="#7a4a1f"/>
+    <circle cx="88" cy="96" r="52" fill="#cfe9f5" stroke="#f2b134" stroke-width="12"/>
+    <circle cx="88" cy="96" r="52" fill="none" stroke="#b37a12" stroke-width="3"/>
+    <path d="M60 80 q14-22 38-22" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round" opacity=".8"/>
+    <circle cx="74" cy="100" r="5" fill="#1d2b33"/><circle cx="102" cy="100" r="5" fill="#1d2b33"/>
+    <path d="M72 120 q16 10 32 0" stroke="#1d2b33" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="88" cy="42" rx="58" ry="11" fill="#5b4636"/>
+    <path d="M52 42 Q54 6 88 6 Q122 6 124 42 Z" fill="#6e5541"/>
+    <rect x="53" y="30" width="70" height="8" fill="#1d2b33"/>
+  </svg>
+  <h1>Inspector Lupa</h1>
+  <p>Los misterios de Villaluz</p>
+  <div class="col">
+    <button class="btn" id="bJugar" style="font-size:24px;padding:14px 48px">Jugar</button>
+    <button class="btn sec" id="bDia">Caso del día</button>
+    <button class="btn sec" id="bSon">Sonido: sí</button>
+    <button class="btn sec" id="instalar">Instalar en este dispositivo</button>
+  </div>
+  <div id="iosTip">Para instalarlo en el iPhone o iPad: pulsa <b>Compartir</b> en Safari y elige <b>«Añadir a pantalla de inicio»</b>.</div>
+  <div class="ver">Inspector Lupa v2.1 · NovaApps</div>
+</section>
+
+<section id="map" class="screen">
+  <div class="mapTop"><button class="btn sec" id="bMapMenu">‹ Inicio</button><span id="totE" style="font-size:18px"></span></div>
+  <div class="tabs" id="tabs"></div>
+  <h2 id="capTit"></h2>
+  <div class="sub" id="capSub"></div>
+  <div id="casos"></div>
+</section>
+
+<section id="caso" class="screen">
+  <header class="top">
+    <button class="icb" id="bBack" aria-label="Volver">‹</button>
+    <div class="tt"><small id="cNum"></small><b id="cTit"></b></div>
+    <span id="cEst"></span>
+    <button class="pista" id="bPista">Pista</button>
+  </header>
+  <div class="cw" id="cw"></div>
+</section>
+
+<div id="modal"><div id="mbox"></div></div>
+
+<script>
+{
+const VERSION='2.1';
+const $=id=>document.getElementById(id);
+
+/* ================= AZAR CON SEMILLA ================= */
+let rng=Math.random;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const ri=n=>Math.floor(rng()*n),pick=a=>a[ri(a.length)];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=ri(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function perms(n){const res=[],p=[...Array(n).keys()];const rec=k=>{if(k===n){res.push(p.slice());return;}for(let i=k;i<n;i++){[p[k],p[i]]=[p[i],p[k]];rec(k+1);[p[k],p[i]]=[p[i],p[k]];}};rec(0);return res;}
+
+/* ================= PERSONAJES ================= */
+const HOMBRES=[{n:'Sr. Gil',o:'panadero'},{n:'Sr. Ortega',o:'cartero'},{n:'Sr. Molina',o:'herrero'},{n:'Sr. Pardo',o:'maestro'},
+ {n:'Sr. Benítez',o:'alcalde'},{n:'Sr. Castro',o:'pescadero'},{n:'Sr. Ríos',o:'molinero'},{n:'Sr. Vidal',o:'relojero'}];
+const MUJERES=[{n:'Sra. Ruiz',o:'florista'},{n:'Sra. Navarro',o:'boticaria'},{n:'Sra. Mora',o:'bibliotecaria'},{n:'Sra. Lozano',o:'tabernera'},
+ {n:'Sra. Prieto',o:'costurera'},{n:'Sra. Soler',o:'veterinaria'},{n:'Sra. Campos',o:'pastelera'},{n:'Sra. Iglesias',o:'fotógrafa'}];
+const PELOS=['moreno','rubio','pelirrojo','canoso'];
+const HAIR={moreno:'#3b2a20',rubio:'#e8c25a',pelirrojo:'#c4562b',canoso:'#d3d3d3'};
+const PIEL=['#f1c27d','#e0ac69','#ffdbac','#c68642','#8d5524'];
+const ROPA=['#3d7ea6','#c0392b','#2f9e6e','#8e44ad','#d35400','#34495e','#16a085','#b7950b'];
+const FONDO=['#fde7a8','#cfe9f5','#d8f0d2','#f9d6d0','#e5dcf5','#ffe0b8'];
+const TRS=[
+ {test:s=>s.gafas,pos:'lleva gafas',neg:'no lleva gafas'},
+ {test:s=>s.sombrero,pos:'lleva sombrero',neg:'no lleva sombrero'},
+ {test:s=>s.bigote,pos:'tiene bigote',neg:'no tiene bigote'},
+ {test:s=>s.mujer,pos:'es una mujer',neg:'es un hombre'},
+ ...PELOS.map(c=>({test:s=>s.pelo===c,pos:'tiene el pelo '+c,neg:'no tiene el pelo '+c}))];
+
+/* ================= CAPÍTULOS ================= */
+const CAP1={id:1,nombre:'Villaluz',titulo:'Capítulo 1 · Villaluz',sub:'Diez robos en el pueblo y la caja fuerte del molino.',noche:false,
+ lugares:[{k:'panaderia',n:'Panadería',en:'en la panadería',ja:'junto a la panadería'},{k:'plaza',n:'Plaza',en:'en la plaza',ja:'junto a la plaza'},
+  {k:'estacion',n:'Estación',en:'en la estación',ja:'junto a la estación'},{k:'biblioteca',n:'Biblioteca',en:'en la biblioteca',ja:'junto a la biblioteca'},
+  {k:'mercado',n:'Mercado',en:'en el mercado',ja:'junto al mercado'},{k:'molino',n:'Molino',en:'en el molino',ja:'junto al molino'},
+  {k:'taberna',n:'Taberna',en:'en la taberna',ja:'junto a la taberna'},{k:'botica',n:'Botica',en:'en la botica',ja:'junto a la botica'}],
+ objetos:[{n:'Paraguas',a:'el paraguas'},{n:'Linterna',a:'la linterna'},{n:'Bastón',a:'el bastón'},{n:'Cesta',a:'la cesta'},
+  {n:'Llave inglesa',a:'la llave inglesa'},{n:'Violín',a:'el violín'},{n:'Pala',a:'la pala'}],
+ horas:[],
+ robos:['la tarta del concurso de repostería','el gallo de la veleta','el reloj del ayuntamiento','el trofeo de petanca','las llaves del molino',
+  'el retrato del alcalde','la receta secreta de la panadería','el bombín del alcalde','la recaudación de las fiestas','el jamón de la rifa','la campanilla del colegio','el queso premiado'],
+ niveles:[
+  {mode:'q',n:4,min:1,max:3},{mode:'q',n:6,min:2,max:4},{mode:'q',n:8,min:3,max:5},
+  {mode:'x',dims:'p',n:3,types:'ABC',min:2,max:4},{mode:'x',dims:'p',n:3,types:'BC',min:2,max:5},{mode:'x',dims:'p',n:4,types:'ABC',min:3,max:6},
+  {mode:'x',dims:'po',n:3,types:'ABCDEF',min:3,max:6},{mode:'x',dims:'p',n:4,types:'BC',min:3,max:7},{mode:'x',dims:'po',n:3,types:'BCEF',min:3,max:7},
+  {mode:'x',dims:'po',n:4,types:'ABCDEF',min:4,max:9},{mode:'lock'}],
+ diario:null,
+ final:{tit:'La caja fuerte del molino',len:3,alpha:10,tipo:'cifra',escena:'molino',
+  intro:'Todos los objetos robados en Villaluz han aparecido… dentro de una caja fuerte escondida en el molino. Junto a ella hay unas notas del ladrón sobre la combinación: <b>3 cifras distintas</b>.',
+  fin:'¡Has recuperado todo lo robado en Villaluz!'}};
+
+const CAP2={id:2,nombre:'La feria',titulo:'Capítulo 2 · La feria de Villaluz',sub:'Llegan las fiestas y la feria nocturna del mago Zambini. Alguien la está saboteando… y los feriantes no siempre dicen la verdad.',noche:true,
+ lugares:[{k:'noria',n:'Noria',en:'en la noria',ja:'junto a la noria'},{k:'tombola',n:'Tómbola',en:'en la tómbola',ja:'junto a la tómbola'},
+  {k:'churreria',n:'Churrería',en:'en la churrería',ja:'junto a la churrería'},{k:'carrusel',n:'Carrusel',en:'en el carrusel',ja:'junto al carrusel'},
+  {k:'escenario',n:'Escenario',en:'en el escenario',ja:'junto al escenario'},{k:'tiro',n:'Tiro al blanco',en:'en el tiro al blanco',ja:'junto al tiro al blanco'},
+  {k:'terror',n:'Casa del terror',en:'en la casa del terror',ja:'junto a la casa del terror'},{k:'algodon',n:'Algodón dulce',en:'en el puesto de algodón',ja:'junto al puesto de algodón'}],
+ objetos:[{n:'Farolillo',a:'el farolillo'},{n:'Globo',a:'el globo'},{n:'Abanico',a:'el abanico'},{n:'Silbato',a:'el silbato'},
+  {n:'Peluche',a:'el peluche'},{n:'Chistera',a:'la chistera'},{n:'Matasuegras',a:'el matasuegras'}],
+ horas:['20:00','21:00','22:00','23:00'],
+ robos:['la palanca de la noria','el premio gordo de la tómbola','la masa de los churros','el caballito dorado del carrusel','el micrófono de la orquesta',
+  'las escopetas de corcho','el esqueleto de la casa del terror','la máquina de algodón de azúcar','la corona de la reina de las fiestas','los fuegos artificiales',
+  'la recaudación de la feria','la varita del mago Zambini'],
+ niveles:[
+  {mode:'x',dims:'p',n:4,types:'BCN',min:3,max:6},
+  {mode:'x',dims:'po',n:4,types:'BCDEFN',min:4,max:8},
+  {mode:'x',dims:'ph',n:3,types:'BCHI',min:3,max:6},
+  {mode:'x',dims:'ph',n:4,types:'BCHIN',min:4,max:8},
+  {mode:'x',dims:'p',n:4,types:'ABCN',liar:true,min:2,max:6},
+  {mode:'x',dims:'poh',n:3,types:'BCDEFHI',min:4,max:8},
+  {mode:'x',dims:'p',n:5,types:'BCN',min:4,max:8},
+  {mode:'x',dims:'po',n:4,types:'BCEFN',liar:true,min:3,max:8},
+  {mode:'x',dims:'poh',n:4,types:'BCEFHIN',min:5,max:10},
+  {mode:'x',dims:'ph',n:4,types:'BCHIN',liar:true,min:3,max:8},
+  {mode:'x',dims:'poh',n:4,types:'BCDEFHIN',liar:true,min:4,max:10},
+  {mode:'x',dims:'poh',n:4,types:'BCEFHIN',liar:true,min:5,max:11},
+  {mode:'lock'}],
+ diario:[
+  'Llegan las fiestas. El mago Zambini, dueño de la feria, te pide ayuda: alguien quiere arruinar la primera noche. Fíjate en el <b>plano</b>: el orden de los puestos importa.',
+  'Zambini sospecha que no es un gamberro cualquiera: los sabotajes parecen planeados. Junto al puesto encuentras una tarjeta con una estrella dibujada.',
+  'Esta noche los feriantes fichan al llegar. Las <b>horas de llegada</b> son la clave: cada sospechoso llegó a una hora distinta.',
+  'Otra tarjeta, esta vez con un rombo. Alguien está dejando su firma en cada sabotaje.',
+  'Los feriantes empiezan a encubrirse. A partir de ahora, ojo con las <b>declaraciones</b>: el culpable miente.',
+  'Zambini ha desaparecido de su caravana. Solo queda su chistera vacía… y otra tarjeta, con un círculo.',
+  'La feria está a rebosar: cinco sospechosos y cinco puestos. Un niño dice haber visto luces en la caravana a medianoche.',
+  'Las tarjetas forman una secuencia: estrella, rombo, círculo… ¿Será la combinación de algo?',
+  'La reina de las fiestas recibe una nota anónima: «La función final será inolvidable».',
+  'Ya conoces el truco de los mentirosos. Pero esta vez el culpable es especialmente listo con las horas.',
+  'Todo apunta a la caravana de Zambini. En el suelo, una tarjeta con un triángulo.',
+  'Última noche de feria. Resuelve este caso y tendrás todas las notas para abrir la caravana.'],
+ final:{tit:'La caravana de Zambini',len:4,alpha:6,tipo:'símbolo',escena:'caravana',
+  intro:'La caravana de Zambini está cerrada con un candado de <b>4 símbolos distintos</b>. Las tarjetas que has ido encontrando durante la feria son las notas que te dirán la combinación.',
+  fin:'Dentro está Zambini, sonriente: los sabotajes eran su gran número final para encontrar al mejor detective del país. Te entrega un billete de tren: <b>«Capítulo 3: el Expreso del Norte»</b>. ¡Continuará!'}};
+const CAPS={1:CAP1,2:CAP2};
+
+/* ================= RETRATOS Y SÍMBOLOS ================= */
+function retrato(s){
+ const hc=HAIR[s.pelo],sk=s.piel;let g=`<rect width="100" height="100" fill="${s.fondo}"/>`;
+ if(s.mujer)g+=`<path d="M27 45 Q25 80 35 86 L65 86 Q75 80 73 45 Z" fill="${hc}"/>`;
+ g+=`<path d="M14 100 Q18 75 50 73 Q82 75 86 100 Z" fill="${s.ropa}"/><path d="M42 74 L50 86 L58 74Z" fill="#fff" opacity=".85"/>`;
+ g+=`<rect x="44" y="62" width="12" height="13" fill="${sk}"/><circle cx="30" cy="48" r="4" fill="${sk}"/><circle cx="70" cy="48" r="4" fill="${sk}"/>`;
+ g+=`<ellipse cx="50" cy="46" rx="20" ry="23" fill="${sk}"/>`;
+ if(!s.sombrero)g+=s.mujer?`<path d="M29 47 Q27 21 50 20 Q73 21 71 47 Q67 31 50 30 Q34 31 29 47Z" fill="${hc}"/>`
+  :`<path d="M30 42 Q30 21 50 21 Q70 21 70 42 Q65 30 50 31 Q37 30 30 42Z" fill="${hc}"/>`;
+ const ce=s.pelo==='canoso'?'#9a9a9a':(s.pelo==='rubio'?'#b08a2a':'#3b2a20');
+ g+=`<path d="M39 39 h7 M54 39 h7" stroke="${ce}" stroke-width="2.4" stroke-linecap="round"/>`;
+ g+=`<circle cx="43" cy="46" r="2.3" fill="#222"/><circle cx="57" cy="46" r="2.3" fill="#222"/>`;
+ g+=`<path d="M50 48 q-3 6 1 7" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="1.6"/>`;
+ g+=`<path d="M44 61 q6 4 12 0" fill="none" stroke="${s.mujer?'#c0392b':'#7a3b2e'}" stroke-width="${s.mujer?2.6:2}" stroke-linecap="round"/>`;
+ if(s.bigote)g+=`<path d="M40 58 q10 -6 20 0 q-10 4 -20 0Z" fill="${s.pelo==='canoso'?'#bdbdbd':hc}" stroke="rgba(0,0,0,.25)" stroke-width=".6"/>`;
+ if(s.gafas)g+=`<g fill="rgba(255,255,255,.25)" stroke="#222" stroke-width="2"><circle cx="43" cy="46" r="6.2"/><circle cx="57" cy="46" r="6.2"/></g><path d="M49 46 h2 M37 45 l-6 -2 M63 45 l6 -2" stroke="#222" stroke-width="2"/>`;
+ if(s.sombrero)g+=s.mujer?`<ellipse cx="50" cy="27" rx="32" ry="7" fill="#b5651d"/><path d="M36 27 Q36 9 50 9 Q64 9 64 27Z" fill="#c97a2b"/><rect x="36" y="20" width="28" height="4" fill="#e85d75"/><circle cx="63" cy="22" r="4" fill="#f7c6d0"/>`
+  :`<ellipse cx="50" cy="28" rx="27" ry="5" fill="#2d2d2d"/><path d="M34 28 Q34 7 50 7 Q66 7 66 28Z" fill="#3a3a3a"/><rect x="34" y="21" width="32" height="4" fill="#8b1e1e"/>`;
+ return `<svg viewBox="0 0 100 100" aria-hidden="true">${g}</svg>`;}
+function rasgos(s){const r=['Pelo '+s.pelo];if(s.gafas)r.push('gafas');if(s.sombrero)r.push('sombrero');if(s.bigote)r.push('bigote');return r.join(' · ');}
+const SIMB=['<path d="M20 3 L24.7 14.5 L37 15.3 L27.5 23.2 L30.5 35.3 L20 28.6 L9.5 35.3 L12.5 23.2 L3 15.3 L15.3 14.5Z" fill="#f2b134"/>',
+ '<path d="M20 3 L35 20 L20 37 L5 20Z" fill="#ff6b5b"/>','<circle cx="20" cy="20" r="15" fill="#4d96ff"/>','<path d="M20 4 L37 35 L3 35Z" fill="#3ccf8e"/>',
+ '<path d="M20 35 C2 22 4 6 14 6 C18 6 20 10 20 12 C20 10 22 6 26 6 C36 6 38 22 20 35Z" fill="#ff7eb6"/>','<path d="M25 4 A16 16 0 1 0 36 29 A12.5 12.5 0 1 1 25 4Z" fill="#b388ff"/>'];
+const simbolo=i=>`<svg viewBox="0 0 40 40" aria-hidden="true">${SIMB[i]}</svg>`;
+
+/* ================= ESCENAS ILUSTRADAS ================= */
+let svgId=0;
+const R=(x,y,w,h,f,ex='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}" ${ex}/>`;
+const C=(x,y,r,f,ex='')=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${f}" ${ex}/>`;
+const E=(x,y,rx,ry,f,ex='')=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}" ${ex}/>`;
+const P=(d,f,ex='')=>`<path d="${d}" fill="${f}" ${ex}/>`;
+const T=(x,y,t,sz,f,ex='')=>`<text x="${x}" y="${y}" font-size="${sz}" fill="${f}" text-anchor="middle" font-family="Fredoka,Trebuchet MS,sans-serif" font-weight="700" ${ex}>${t}</text>`;
+const cartel=(cx,y,w,t,bg,fg,sz=18)=>R(cx-w/2,y,w,30,bg,'rx="6" stroke="rgba(0,0,0,.3)" stroke-width="2"')+T(cx,y+21,t,sz,fg);
+function toldo(x,y,w,c1,c2){let s='';const n=Math.max(4,Math.round(w/30)),sw=w/n;for(let i=0;i<n;i++){const c=i%2?c2:c1;s+=R(x+i*sw,y,sw+.6,24,c)+C(x+i*sw+sw/2,y+24,sw/2,c);}return s;}
+const ventana=(x,y,w,h,luz)=>R(x,y,w,h,luz?'#ffe08a':'#bfe3f5','stroke="#5b4636" stroke-width="3"')+`<path d="M${x+w/2} ${y}v${h}M${x} ${y+h/2}h${w}" stroke="#5b4636" stroke-width="2"/>`;
+const puerta=(x,y,w,h,f)=>R(x,y,w,h,f,'rx="4" stroke="rgba(0,0,0,.3)" stroke-width="2"')+C(x+w-8,y+h/2,2.5,'#f2b134');
+const farola=(x,y,n)=>R(x-2,y-82,4,82,'#2d3436')+(n?C(x,y-88,24,'#ffe08a','opacity=".25"'):'')+R(x-8,y-98,16,18,n?'#ffe08a':'#dfe6e9','rx="3" stroke="#2d3436" stroke-width="2"');
+const arbol=(x,y,s=1,n)=>R(x-4*s,y-40*s,8*s,40*s,'#6d4423')+C(x,y-55*s,26*s,n?'#24452f':'#4caf50')+C(x-16*s,y-44*s,18*s,n?'#1f3d29':'#43a047')+C(x+16*s,y-46*s,18*s,n?'#2a5136':'#66bb6a');
+const nube=(x,y)=>E(x,y,40,15,'#fff')+E(x+30,y-8,28,15,'#fff')+E(x-26,y+2,22,11,'#fff');
+function guirnalda(x1,x2,y,sag,n){const cy=y+sag*2;let s=`<path d="M${x1} ${y} Q${(x1+x2)/2} ${cy} ${x2} ${y}" stroke="#222" stroke-width="2" fill="none"/>`;
+ const cols=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff9ff3'];
+ for(let i=1;i<n;i++){const t=i/n,x=x1+(x2-x1)*t,yy=(1-t)*(1-t)*y+2*(1-t)*t*cy+t*t*y;s+=C(x,yy+5,10,cols[i%5],'opacity=".25"')+C(x,yy+5,4.5,cols[i%5]);}return s;}
+function cielo(n){const id='sk'+(++svgId);
+ let s=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${n?'#0b1535':'#8fd3ff'}"/><stop offset="1" stop-color="${n?'#3a2d6b':'#e8f7ff'}"/></linearGradient></defs>`+R(0,0,800,260,`url(#${id})`);
+ if(n){for(let i=0;i<46;i++)s+=C((i*97+31)%800,(i*53+7)%150,i%4?1.1:2,'#fff',`opacity="${i%3?.6:.95}"`);s+=C(700,52,24,'#fff6d5')+C(711,45,22,'#121c45');}
+ else s+=C(690,55,30,'#ffe066')+C(690,55,42,'#ffe066','opacity=".25"')+nube(130,52)+nube(450,36);
+ return s;}
+const suelo=(n,c)=>R(0,203,800,57,c||(n?'#2b2440':'#d9c7a5'))+R(0,201,800,4,n?'#4a3f6b':'#b9a47f')+(n?'':`<path d="M0 230 H800 M0 248 H800" stroke="rgba(0,0,0,.06)" stroke-width="2"/>`);
+function casas(n){let s='';const cols=n?['#2f2a4a','#3a3358','#2a2744']:['#f3d9b1','#e8c3a0','#cfe0d0','#f1e3c8','#d9c9e8'];
+ for(let i=0;i<9;i++){const x=i*92-10,h=70+((i*37)%45),y=205-h;s+=R(x,y,90,h,cols[i%cols.length])+P(`M${x-4} ${y} L${x+45} ${y-24} L${x+94} ${y}Z`,n?'#231f38':'#c46a45');
+  s+=R(x+18,y+16,16,18,n&&i%2?'#ffe08a':(n?'#1b1830':'#9fc9e0'))+R(x+56,y+16,16,18,n&&i%3===0?'#ffe08a':(n?'#1b1830':'#9fc9e0'));}
+ return `<g opacity="${n?1:.75}">${s}</g>`;}
+function feria(){let s='';const cols=['#4b2a6b','#2f3f7a','#5b2a4a'];
+ for(let i=0;i<7;i++){const x=i*125-20;s+=P(`M${x} 205 L${x} 150 L${x+55} 118 L${x+110} 150 L${x+110} 205Z`,cols[i%3],'opacity=".85"')+R(x+48,104,3,16,'#888')+P(`M${x+51} 104 l14 5 l-14 5Z`,'#ff6b6b');}
+ return s+guirnalda(0,400,14,18,16)+guirnalda(400,800,14,18,16);}
+const casa=(x,y,w,h,f,tejado)=>R(x,y,w,h,f,'stroke="rgba(0,0,0,.25)" stroke-width="3"')+P(`M${x-12} ${y+2} L${x+w/2} ${y-42} L${x+w+12} ${y+2}Z`,tejado);
+
+const ESCENAS={
+ panaderia:n=>casas(n)+suelo(n)+casa(240,95,320,110,'#f6d7a7','#b5532c')+cartel(400,102,210,'PANADERÍA','#8a5a2c','#fff')+toldo(250,138,300,'#d64933','#fff')
+  +ventana(270,166,120,37,n)+E(300,194,15,7,'#c98a3a')+E(335,195,15,7,'#d9a04a')+E(368,194,13,6,'#b8732e')+puerta(430,150,52,55,'#7a4a1f')+farola(170,205,n)+arbol(660,205,1,n),
+ plaza:n=>casas(n)+suelo(n)+arbol(130,205,1.1,n)+arbol(680,205,1.1,n)+E(400,200,120,16,'#8fa9b8')+R(280,182,240,20,'#a9bfcc')+R(390,138,20,46,'#a9bfcc')
+  +E(400,138,44,9,'#8fa9b8')+`<path d="M385 132 Q350 120 330 182 M415 132 Q450 120 470 182 M400 128 Q400 105 392 100" stroke="#7fd3ff" stroke-width="4" fill="none" opacity=".9"/>`
+  +R(210,188,50,6,'#7a4a1f')+R(540,188,50,6,'#7a4a1f')+farola(260,205,n)+farola(560,205,n),
+ estacion:n=>suelo(n,n?'#2b2440':'#cfc4b0')+casa(380,85,380,118,'#e8d3b0','#8e3b2a')+C(570,118,18,'#fff','stroke="#5b4636" stroke-width="3"')
+  +`<path d="M570 118 v-11 M570 118 h8" stroke="#1d2b33" stroke-width="2.5"/>`+cartel(570,150,170,'ESTACIÓN','#1d4e6b','#fff')+ventana(410,120,50,40,n)+ventana(680,120,50,40,n)
+  +R(0,196,800,10,'#8d8d8d')+`<path d="M0 232 H800 M0 244 H800" stroke="#555" stroke-width="3"/>`
+  +R(30,140,170,56,'#2d6a4f','rx="6"')+R(160,112,62,84,'#2d6a4f','rx="4"')+R(172,122,38,26,n?'#ffe08a':'#bfe3f5')+R(60,108,22,34,'#333')+C(72,92,12,'#ddd','opacity=".8"')+C(88,76,16,'#ddd','opacity=".6"')
+  +C(70,204,17,'#222')+C(120,204,17,'#222')+C(185,204,17,'#222')+C(70,204,6,'#f2b134')+C(120,204,6,'#f2b134')+C(185,204,6,'#f2b134')+R(20,150,14,30,'#d64933'),
+ biblioteca:n=>casas(n)+suelo(n)+R(210,190,380,15,'#cfc6b8')+R(230,178,340,12,'#ddd5c7')+R(250,92,300,86,'#efe7da')+P('M232 94 L400 40 L568 94Z','#e2d8c8','stroke="#bdb2a0" stroke-width="2"')
+  +T(400,84,'BIBLIOTECA',17,'#5b4636')+[0,1,2,3,4].map(i=>R(266+i*62,98,18,80,'#fff','stroke="#cfc6b8" stroke-width="2"')).join('')+puerta(384,130,32,48,'#6d4423')+arbol(130,205,1,n)+arbol(690,205,.9,n),
+ mercado:n=>casas(n)+suelo(n)+[0,1,2].map(i=>{const x=80+i*230,cs=[['#2f9e6e','#fff'],['#f2b134','#fff'],['#4d96ff','#fff']][i];
+  return R(x,98,6,107,'#6d4423')+R(x+174,98,6,107,'#6d4423')+toldo(x-10,92,200,cs[0],cs[1])+R(x,160,180,45,'#a0522d','stroke="rgba(0,0,0,.25)" stroke-width="2"')
+   +[0,1,2,3,4,5].map(k=>C(x+18+k*29,154,11,['#e2483d','#f08a24','#f5cd2f','#4caf3a','#8e4bb5','#e0457b'][(k+i)%6])).join('');}).join(''),
+ molino:n=>cielo(n)+E(400,262,460,92,n?'#22351f':'#7cb342')+P('M358 200 L378 92 L422 92 L442 200Z','#f5f5f5','stroke="#bdbdbd" stroke-width="2"')+P('M370 94 L400 62 L430 94Z','#b5532c')
+  +puerta(390,168,22,32,'#6d4423')+ventana(392,120,18,18,n)+`<g transform="translate(400 84) rotate(18) scale(.68)">${[0,90,180,270].map(a=>`<g transform="rotate(${a})">${R(-7,-112,14,104,'#e6dccd','stroke="#6d4c41" stroke-width="2"')}<path d="M-7 -100 h14 M-7 -80 h14 M-7 -60 h14 M-7 -40 h14" stroke="#6d4c41" stroke-width="1.5"/></g>`).join('')}</g>`+C(400,82,7,'#6d4c41')
+  +arbol(150,215,.9,n)+arbol(650,212,1,n),
+ taberna:n=>casas(n)+suelo(n)+casa(250,95,300,110,'#7a4a1f','#4b2a12')+cartel(400,104,170,'TABERNA','#2d1b0e','#f2b134')+ventana(272,140,70,46,true)+ventana(458,140,70,46,true)
+  +puerta(372,145,56,60,'#4b2a12')+E(205,188,22,17,'#8d5a2b','stroke="#4b2a12" stroke-width="3"')+E(600,188,22,17,'#8d5a2b','stroke="#4b2a12" stroke-width="3"')+E(205,166,20,10,'#8d5a2b','stroke="#4b2a12" stroke-width="3"')+farola(690,205,n),
+ botica:n=>casas(n)+suelo(n)+casa(260,92,280,113,'#2e7d5b','#1f5a40')+cartel(400,100,150,'BOTICA','#fff','#2e7d5b')+C(560,120,20,'#fff','stroke="#2e7d5b" stroke-width="3"')
+  +R(553,106,14,28,'#2fb36d')+R(546,113,28,14,'#2fb36d')+ventana(280,140,100,50,n)+[0,1,2,3].map(k=>R(290+k*22,168,14,18,['#f2b134','#4d96ff','#e0457b','#3ccf8e'][k],'rx="3"')).join('')
+  +puerta(430,140,52,65,'#1f5a40')+arbol(160,205,1,n),
+ noria:()=>feria()+suelo(1)+`<path d="M330 205 L400 112 L470 205 M345 205 L400 112 L455 205" stroke="#cfd8dc" stroke-width="7" fill="none"/>`
+  +C(400,112,92,'none','stroke="#e0e0e0" stroke-width="6"')+[...Array(12)].map((_,i)=>{const a=i*Math.PI/6,x=400+Math.cos(a)*92,y=112+Math.sin(a)*92;
+   return `<path d="M400 112 L${x.toFixed(1)} ${y.toFixed(1)}" stroke="#b0bec5" stroke-width="2"/>`+C(x,y,5,['#ff6b6b','#ffd93d','#6bcb77','#4d96ff'][i%4])+R(x-10,y+4,20,14,['#d64933','#f2b134','#2f9e6e','#4d96ff'][i%4],'rx="3"');}).join('')+C(400,112,10,'#f2b134'),
+ tombola:()=>feria()+suelo(1)+R(250,100,300,105,'#7b2cbf','stroke="#4a148c" stroke-width="3"')+toldo(240,90,320,'#ffd93d','#ff6b6b')+cartel(400,52,180,'TÓMBOLA','#ffd93d','#7b2cbf',20)
+  +R(270,150,260,6,'#fff')+R(270,186,260,6,'#fff')+[0,1,2,3,4,5].map(k=>{const x=292+k*43;return C(x,136,12,['#c98a3a','#ff9ff3','#4d96ff','#6bcb77','#ffd93d','#ff6b6b'][k])+C(x-9,125,5,['#c98a3a','#ff9ff3','#4d96ff','#6bcb77','#ffd93d','#ff6b6b'][k])+C(x+9,125,5,['#c98a3a','#ff9ff3','#4d96ff','#6bcb77','#ffd93d','#ff6b6b'][k])+R(x-10,164,20,22,['#ffd93d','#4d96ff','#ff6b6b','#6bcb77','#ff9ff3','#fff'][k],'rx="3"');}).join(''),
+ churreria:()=>feria()+suelo(1)+R(260,110,280,95,'#f4a261','stroke="#9c5a1f" stroke-width="3"')+toldo(250,100,300,'#e76f51','#fff')+cartel(400,60,180,'CHURROS','#e76f51','#fff',20)
+  +R(250,160,300,10,'#8a5a2c')+[0,1,2,3,4].map(k=>`<path d="M${300+k*45} 150 q8 -26 16 -2" stroke="#d4a373" stroke-width="7" fill="none" stroke-linecap="round"/>`).join('')
+  +`<path d="M330 92 q-12 -18 0 -34 M400 90 q12 -18 0 -36 M470 92 q-12 -18 0 -34" stroke="#fff" stroke-width="4" fill="none" opacity=".35"/>`,
+ carrusel:()=>feria()+suelo(1)+E(400,202,180,16,'#7a1f2b')+R(230,180,340,22,'#c0392b')+[0,1,2,3,4].map(k=>R(258+k*70,96,5,84,'#f2b134')).join('')
+  +[0,1,2,3,4].map(k=>{const x=260+k*70,y=134+(k%2)*14;return E(x+2,y,20,10,'#fff','stroke="#999"')+C(x+20,y-10,8,'#fff','stroke="#999"')+R(x-12,y+6,3,16,'#fff')+R(x+12,y+6,3,16,'#fff');}).join('')
+  +[0,1,2,3,4,5,6,7].map(k=>P(`M400 26 L${210+k*47.5} 98 L${257.5+k*47.5} 98Z`,k%2?'#fff':'#d64933')).join('')+C(400,24,7,'#f2b134')+[...Array(15)].map((_,k)=>C(214+k*26,100,3.5,'#ffd93d')).join(''),
+ escenario:()=>feria()+suelo(1)+R(200,58,400,100,'#1a1a2e')+P('M200 58 Q250 110 238 158 L200 158Z','#b3122e')+P('M600 58 Q550 110 562 158 L600 158Z','#b3122e')+R(190,48,420,14,'#b3122e')
+  +R(170,150,460,55,'#5b3a29','stroke="#3b2418" stroke-width="3"')+P('M260 0 L300 0 L360 150 L240 150Z','rgba(255,240,180,.22)')+P('M520 0 L560 0 L560 150 L440 150Z','rgba(255,240,180,.22)')
+  +R(398,100,4,50,'#aaa')+E(400,98,6,8,'#333')+cartel(400,18,170,'ORQUESTA','#b3122e','#ffd93d'),
+ tiro:()=>feria()+suelo(1)+R(250,100,300,105,'#264653','stroke="#14303a" stroke-width="3"')+toldo(240,90,320,'#2a9d8f','#e9c46a')+cartel(400,52,230,'TIRO AL BLANCO','#e9c46a','#264653')
+  +[0,1].map(r=>[0,1,2,3,4].map(k=>{const x=290+k*55,y=140+r*38;return C(x,y,15,'#fff')+C(x,y,10,'#e63946')+C(x,y,5,'#fff')+C(x,y,2,'#e63946');}).join('')).join(''),
+ terror:()=>feria()+suelo(1)+P('M250 205 L250 100 L300 60 L350 100 L400 50 L450 100 L500 60 L550 100 L550 205Z','#2b2d42','stroke="#11121c" stroke-width="3"')
+  +R(280,120,40,40,'#7cff6b','opacity=".75"')+R(480,120,40,40,'#7cff6b','opacity=".75"')+puerta(372,140,56,65,'#11121c')
+  +P('M600 120 Q600 92 622 92 Q644 92 644 120 L644 150 L636 142 L628 150 L620 142 L612 150 L604 142 L600 150Z','#fff','opacity=".9"')+C(614,112,3,'#222')+C(630,112,3,'#222')
+  +P('M180 70 q10 -10 20 0 q10 -10 20 0 q-10 4 -20 10 q-10 -6 -20 -10Z','#11121c')+cartel(400,174,200,'CASA DEL TERROR','#6a040f','#fff',15),
+ algodon:()=>feria()+suelo(1)+R(270,110,260,95,'#ffafcc','stroke="#c9184a" stroke-width="3"')+toldo(260,100,280,'#ff70a6','#fff')+cartel(400,60,210,'ALGODÓN DULCE','#ff70a6','#fff')
+  +[0,1,2,3].map(k=>{const x=310+k*60;return R(x-2,150,4,40,'#fff')+C(x,140,16,k%2?'#a2d2ff':'#ffc8dd')+C(x-10,134,11,k%2?'#a2d2ff':'#ffc8dd')+C(x+10,132,11,k%2?'#a2d2ff':'#ffc8dd');}).join('')+R(270,175,260,10,'#c9184a'),
+ caravana:()=>feria()+suelo(1)+R(230,90,340,100,'#6a4c93','rx="40" stroke="#3c2a5a" stroke-width="4"')+R(250,120,70,40,'#ffe08a','rx="8"')+R(480,120,70,40,'#ffe08a','rx="8"')
+  +puerta(372,108,56,82,'#3c2a5a')+R(386,150,28,22,'#f2b134','rx="4"')+C(400,148,8,'none','stroke="#f2b134" stroke-width="4"')+C(290,200,22,'#222')+C(510,200,22,'#222')+C(290,200,8,'#888')+C(510,200,8,'#888')
+  +T(400,80,'★ ZAMBINI ★',22,'#ffd93d')
+};
+function escena(k,noche){const f=ESCENAS[k]||ESCENAS.plaza;const cuerpo=f(noche);
+ const necesitaCielo=k!=='molino';
+ return `<svg viewBox="0 0 800 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${necesitaCielo?cielo(noche):''}${cuerpo}</svg>`;}
+
+/* ================= GENERADORES ================= */
+function hacerSospechosos(n){
+ const out=[],usados=new Set(),claves=new Set();let guard=0;
+ while(out.length<n&&guard++<5000){const mujer=rng()<.5,base=pick(mujer?MUJERES:HOMBRES);if(usados.has(base.n))continue;
+  const s={nombre:base.n,oficio:base.o,mujer,pelo:pick(PELOS),gafas:rng()<.45,sombrero:rng()<.4,bigote:!mujer&&rng()<.5,piel:pick(PIEL),ropa:pick(ROPA),fondo:pick(FONDO)};
+  const k=[s.mujer,s.pelo,s.gafas,s.sombrero,s.bigote].join();if(claves.has(k))continue;usados.add(base.n);claves.add(k);out.push(s);}
+ return out;}
+const FRASES=['Un testigo asegura que el culpable %.','Una vecina vio que el culpable %.','Está claro que el culpable %.','El perro del alcalde olfateó que el culpable %.'];
+
+function genQ(cfg,cap){
+ let mejor=null;
+ for(let at=0;at<80;at++){
+  const sus=hacerSospechosos(cfg.n),cu=ri(cfg.n);
+  const pool=shuffle(TRS.map(tr=>({tr,v:tr.test(sus[cu])})));
+  const vale=cl=>[...Array(cfg.n).keys()].filter(i=>cl.every(c=>c.tr.test(sus[i])===c.v)).length===1;
+  let cands=[...Array(cfg.n).keys()],ch=[];
+  for(const c of pool){if(cands.length===1)break;const nc=cands.filter(i=>c.tr.test(sus[i])===c.v);if(nc.length<cands.length){cands=nc;ch.push(c);}}
+  if(cands.length!==1)continue;
+  for(let i=ch.length-1;i>=0;i--){const r=ch.slice(0,i).concat(ch.slice(i+1));if(vale(r))ch=r;}
+  const caso={mode:'q',sus,cu,clues:ch.map(c=>pick(FRASES).replace('%',c.v?c.tr.pos:c.tr.neg)),robo:pick(cap.robos),escena:pick(cap.lugares).k};
+  if(ch.length>=cfg.min&&ch.length<=cfg.max)return caso;if(!mejor)mejor=caso;}
+ return mejor;}
+
+/* Átomos: afirmaciones verdaderas o falsas sobre un reparto (c.pl lugar, c.ob objeto, c.hr hora de cada sospechoso).
+   Tipos: A/B lugar · C rasgos · D/B objeto · E objeto-lugar · F objeto-rasgo · H hora · I relaciones de hora · N plano/vecinos */
+function atomos(k){
+ const {n,sus,lug,obj,horas,cp,cu,hasO,hasH}=k,A=[];
+ const S=i=>sus[i].nombre,Pl=j=>lug[j].en,J=j=>lug[j].ja,O=o=>obj[o].a,H=h=>'a las '+horas[h];
+ const add=(kp,kn,about,tp,tn,f,direct)=>{A.push({k:kp,about,t:tp,f,direct:!!direct});if(tn)A.push({k:kn,about,t:tn,f:c=>!f(c)});};
+ const who=p=>p===cp?'El culpable':'Quien estaba '+Pl(p);
+ for(let s=0;s<n;s++)for(let p=0;p<n;p++)add('A','B',[s],`${S(s)} estaba ${Pl(p)}.`,`${S(s)} no estaba ${Pl(p)}.`,c=>c.pl[s]===p,s===cu&&p===cp);
+ for(let p=0;p<n;p++)for(const tr of TRS)add('C','C',[],`${who(p)} ${tr.pos}.`,`${who(p)} ${tr.neg}.`,c=>tr.test(sus[c.pl.indexOf(p)]));
+ if(hasO){
+  for(let s=0;s<n;s++)for(let o=0;o<n;o++)add('D','B',[s],`${S(s)} llevaba ${O(o)}.`,`${S(s)} no llevaba ${O(o)}.`,c=>c.ob[s]===o);
+  for(let o=0;o<n;o++)for(let p=0;p<n;p++)add('E','E',[],`Quien llevaba ${O(o)} estaba ${Pl(p)}.`,`Quien llevaba ${O(o)} no estaba ${Pl(p)}.`,c=>c.pl[c.ob.indexOf(o)]===p);
+  for(let o=0;o<n;o++)for(const tr of TRS)add('F','F',[],`Quien llevaba ${O(o)} ${tr.pos}.`,`Quien llevaba ${O(o)} ${tr.neg}.`,c=>tr.test(sus[c.ob.indexOf(o)]));}
+ if(hasH){
+  for(let s=0;s<n;s++)for(let h=0;h<n;h++)add('H','H',[s],`${S(s)} llegó ${H(h)}.`,`${S(s)} no llegó ${H(h)}.`,c=>c.hr[s]===h);
+  for(let s=0;s<n;s++)for(let s2=s+1;s2<n;s2++)add('I','I',[s,s2],`${S(s)} llegó antes que ${S(s2)}.`,`${S(s)} llegó después que ${S(s2)}.`,c=>c.hr[s]<c.hr[s2]);
+  for(let s=0;s<n;s++)for(let s2=0;s2<n;s2++)if(s!==s2)add('I','I',[s,s2],`${S(s)} llegó justo una hora antes que ${S(s2)}.`,`${S(s)} no llegó justo una hora antes que ${S(s2)}.`,c=>c.hr[s2]-c.hr[s]===1);
+  for(let h=0;h<n;h++)for(let p=0;p<n;p++)add('I','I',[],`Quien llegó ${H(h)} estaba ${Pl(p)}.`,`Quien llegó ${H(h)} no estaba ${Pl(p)}.`,c=>c.pl[c.hr.indexOf(h)]===p);
+  if(hasO)for(let h=0;h<n;h++)for(let o=0;o<n;o++)add('I','I',[],`Quien llegó ${H(h)} llevaba ${O(o)}.`,`Quien llegó ${H(h)} no llevaba ${O(o)}.`,c=>c.ob[c.hr.indexOf(h)]===o);
+  for(let h=0;h<n;h++)for(const tr of TRS)add('I','I',[],`Quien llegó ${H(h)} ${tr.pos}.`,`Quien llegó ${H(h)} ${tr.neg}.`,c=>tr.test(sus[c.hr.indexOf(h)]));
+  for(let s=0;s<n;s++)add('I','I',[s],`El culpable llegó antes que ${S(s)}.`,null,c=>c.hr[c.pl.indexOf(cp)]<c.hr[s]);}
+ for(let s=0;s<n;s++)for(let p=0;p<n;p++)add('N','N',[s],`${S(s)} estaba ${J(p)}.`,`${S(s)} no estaba ${J(p)}.`,c=>Math.abs(c.pl[s]-p)===1);
+ for(let s=0;s<n;s++)for(let s2=s+1;s2<n;s2++){
+  add('N','N',[s,s2],`${S(s)} y ${S(s2)} estaban en sitios vecinos.`,`${S(s)} y ${S(s2)} no estaban en sitios vecinos.`,c=>Math.abs(c.pl[s]-c.pl[s2])===1);
+  add('N','N',[s,s2],`${S(s)} estaba más cerca de la entrada que ${S(s2)}.`,`${S(s)} estaba más lejos de la entrada que ${S(s2)}.`,c=>c.pl[s]<c.pl[s2]);}
+ if(hasO)for(let o=0;o<n;o++)for(let p=0;p<n;p++)add('N','N',[],`Quien llevaba ${O(o)} estaba ${J(p)}.`,`Quien llevaba ${O(o)} no estaba ${J(p)}.`,c=>Math.abs(c.pl[c.ob.indexOf(o)]-p)===1);
+ return A;}
+
+function genX(cfg,cap){
+ const n=cfg.n,hasO=cfg.dims.includes('o'),hasH=cfg.dims.includes('h'),T=cfg.types;
+ const PP=perms(n),all=[];
+ for(const a of PP)for(const b of (hasO?PP:[null]))for(const h of (hasH?PP:[null]))all.push({pl:a,ob:b,hr:h});
+ let mejor=null;const intentos=all.length>5000?24:60;
+ for(let at=0;at<intentos;at++){
+  const sus=hacerSospechosos(n),lug=shuffle(cap.lugares.slice()).slice(0,n),obj=hasO?shuffle(cap.objetos.slice()).slice(0,n):null,horas=hasH?cap.horas.slice(0,n):null;
+  const sol={pl:shuffle([...Array(n).keys()]),ob:hasO?shuffle([...Array(n).keys()]):null,hr:hasH?shuffle([...Array(n).keys()]):null};
+  const cp=ri(n),cu=sol.pl.indexOf(cp);
+  const atoms=atomos({n,sus,lug,obj,horas,cp,cu,hasO,hasH});atoms.forEach(a=>a.v=a.f(sol));
+  const tests=[];
+  if(cfg.liar){let ok=true;const usados=new Set();
+   for(let i=0;i<n;i++){const op=atoms.filter(a=>!a.about.includes(i)&&a.v===(i!==cu)&&T.includes(a.k)&&a.k!=='C'&&!a.direct&&!usados.has(a.t));
+    if(!op.length){ok=false;break;}const a=pick(op);usados.add(a.t);tests.push({i,a});}
+   if(!ok)continue;}
+  const culp=c=>c.pl.indexOf(cp);
+  const ans=c=>{const k=culp(c);return k+'_'+(c.ob?c.ob[k]:'')+'_'+(c.hr?c.hr[k]:'');};
+  const unico=set=>set.length>0&&set.every(c=>ans(c)===ans(set[0]));
+  const base=all.filter(c=>{const k=culp(c);return tests.every(({i,a})=>a.f(c)===(i!==k));});
+  const pool=shuffle(atoms.filter(a=>a.v&&T.includes(a.k)&&!a.direct));
+  let cands=base,ch=[];
+  for(const a of pool){if(unico(cands))break;const nc=cands.filter(a.f);if(nc.length<cands.length){cands=nc;ch.push(a);}}
+  if(!unico(cands))continue;
+  shuffle(ch);
+  for(let i=ch.length-1;i>=0;i--){const r=ch.slice(0,i).concat(ch.slice(i+1));if(unico(base.filter(c=>r.every(q=>q.f(c)))))ch=r;}
+  const caso={mode:'x',dims:cfg.dims,n,sus,lug,obj,horas,sol,cp,cu,liar:!!cfg.liar,adj:T.includes('N'),
+   clues:ch.map(a=>a.t),tests:tests.map(({i,a})=>({i,t:a.t})),robo:pick(cap.robos),escena:lug[cp].k};
+  if(ch.length>=cfg.min&&ch.length<=cfg.max)return caso;
+  if(!mejor||Math.abs(ch.length-cfg.min)<Math.abs(mejor.clues.length-cfg.min))mejor=caso;}
+ return mejor;}
+
+function genLock(spec){
+ const codes=[];const rec=cur=>{if(cur.length===spec.len){codes.push(cur.slice());return;}for(let d=0;d<spec.alpha;d++)if(!cur.includes(d)){cur.push(d);rec(cur);cur.pop();}};rec([]);
+ const fb=(g,s)=>{let bien=0,mal=0;g.forEach((d,i)=>{if(s[i]===d)bien++;else if(s.includes(d))mal++;});return bien+','+mal;};
+ const [lo,hi]=spec.len===3?[4,5]:[4,6];let mejor=null;
+ for(let at=0;at<80;at++){
+  const sec=pick(codes);let cands=codes,ch=[];
+  for(let k=0;k<500&&cands.length>1;k++){const g=pick(codes);const f=fb(g,sec);const nc=cands.filter(c=>fb(g,c)===f);if(nc.length<cands.length){cands=nc;ch.push({g,f});}}
+  if(cands.length!==1)continue;
+  for(let i=ch.length-1;i>=0;i--){const r=ch.slice(0,i).concat(ch.slice(i+1));if(codes.filter(c=>r.every(h=>fb(h.g,c)===h.f)).length===1)ch=r;}
+  const caso={mode:'lock',sec,hints:ch,spec};if(ch.length>=lo&&ch.length<=hi)return caso;if(!mejor||ch.length<mejor.hints.length)mejor=caso;}
+ return mejor;}
+function textoPista(f,tipo){const [b,m]=f.split(',').map(Number),fem=tipo==='cifra';
+ if(!b&&!m)return fem?'Ninguna cifra es correcta.':'Ningún símbolo es correcto.';
+ const uno=fem?'una cifra es correcta':'un símbolo es correcto',var_=x=>x+(fem?' cifras son correctas':' símbolos son correctos');
+ const p=[];
+ if(b)p.push((b===1?uno+' y está bien colocad':var_(b)+' y están bien colocad')+(fem?'a':'o')+(b>1?'s':''));
+ if(m)p.push((m===1?uno+' pero está mal colocad':var_(m)+' pero están mal colocad')+(fem?'a':'o')+(m>1?'s':''));
+ const t=p.join('; ');return t[0].toUpperCase()+t.slice(1)+'.';}
+
+/* ================= GUARDADO Y SONIDO ================= */
+let save={caps:{1:{unlocked:1,stars:{}},2:{unlocked:1,stars:{}}},dia:{}};
+try{const s=JSON.parse(localStorage.getItem('inspectorLupa'));
+ if(s&&s.caps)save=Object.assign(save,s);else if(s&&s.unlocked){save.caps[1]={unlocked:s.unlocked,stars:s.stars||{}};save.dia=s.dia||{};}}catch(e){}
+for(const k of [1,2])if(!save.caps[k])save.caps[k]={unlocked:1,stars:{}};
+const guardar=()=>{try{localStorage.setItem('inspectorLupa',JSON.stringify(save));}catch(e){}};
+let son=true,AC=null;try{son=localStorage.getItem('inspectorLupa_son')!=='0';}catch(e){}
+function tono(f,d=.12,tp='sine',v=.12,dl=0){if(!son)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();
+ const t=AC.currentTime+dl,o=AC.createOscillator(),g=AC.createGain();o.type=tp;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+ o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.02);}catch(e){}}
+const sfx={tic:()=>tono(700,.05,'sine',.06),mal:()=>{tono(220,.25,'triangle',.14);tono(180,.3,'triangle',.1,.1);},
+ bien:()=>[523,659,784,1046].forEach((f,i)=>tono(f,.25,'triangle',.12,i*.1)),clic:()=>tono(1200,.04,'square',.03)};
+function setSon(v){son=v;try{localStorage.setItem('inspectorLupa_son',v?'1':'0');}catch(e){}$('bSon').textContent='Sonido: '+(v?'sí':'no');}
+
+/* ================= PANTALLAS Y MODAL ================= */
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));window.scrollTo(0,0);}
+function modal(html,bts){const b=$('mbox');b.innerHTML=html+'<div class="bts"></div>';const w=b.querySelector('.bts');
+ bts.forEach(o=>{const x=document.createElement('button');x.className='btn '+(o.c||'');x.innerHTML=o.t;if(o.id)x.id=o.id;if(o.dis)x.disabled=true;
+  x.onclick=()=>{cerrar();o.f&&o.f();};w.appendChild(x);});$('modal').classList.add('on');}
+const cerrar=()=>$('modal').classList.remove('on');
+
+function tipoDe(cfg,cap){if(cfg.mode==='q')return'¿Quién fue?';if(cfg.mode==='lock')return'Final del capítulo';
+ let t={p:'Quién y dónde',po:'Quién, dónde y con qué',ph:'Quién, dónde y cuándo',poh:'Quién, dónde, con qué y cuándo'}[cfg.dims];
+ if(cfg.types.includes('N'))t+=' · plano';if(cfg.liar)t+=' · mentirosos';return t;}
+
+let capSel=1;
+function pintarMapa(){
+ const cap=CAPS[capSel],sv=save.caps[capSel];document.documentElement.classList.toggle('noche',cap.noche);
+ $('tabs').innerHTML=[1,2].map(k=>`<button class="tab${k===capSel?' on':''}" data-k="${k}">${CAPS[k].titulo.split(' · ')[0]}${k===2&&!Object.keys(save.caps[2].stars).length?'<sup>NUEVO</sup>':''}</button>`).join('');
+ $('tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>{capSel=+b.dataset.k;pintarMapa();});
+ $('capTit').textContent=cap.titulo;$('capSub').textContent=cap.sub;
+ let tot=0;
+ $('casos').innerHTML=cap.niveles.map((lv,i)=>{const st=sv.stars[i]||0;tot+=st;const lock=i+1>sv.unlocked;
+  return `<button class="carp${cap.noche?' c2':''}${lock?' lock':''}${lv.mode==='lock'?' fin':''}${i+1===sv.unlocked?' act':''}" data-i="${i}">
+   <b>${lv.mode==='lock'?(cap.id===1?'Caja fuerte':'La caravana'):'Caso '+(i+1)}</b><small>${lock?'Bloqueado':tipoDe(lv,cap)}</small>
+   <div class="st">${lock?'':'<i>'+'★'.repeat(st)+'</i>'+'☆'.repeat(3-st)}</div></button>`;}).join('');
+ $('totE').textContent='★ '+tot+' / '+cap.niveles.length*3;
+ $('casos').querySelectorAll('.carp').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(i+1<=sv.unlocked)empezar(capSel,i,null);});}
+
+/* ================= PARTIDA ================= */
+let G=null;
+function empezar(capId,i,seed,dia){
+ const cap=CAPS[capId],cfg=dia?dia.cfg:cap.niveles[i];
+ const sd=seed??(capId*100000+1000+i*7919);rng=mulberry32(sd);
+ const caso=cfg.mode==='q'?genQ(cfg,cap):cfg.mode==='lock'?genLock(cap.final):genX(cfg,cap);rng=Math.random;
+ G={cap:capId,i,cfg,caso,seed:sd,dia,fallos:0,pista:false,off:new Set(),tach:new Set(),tachD:new Set(),marks:{},rueda:Array(caso.spec?caso.spec.len:3).fill(0),sel:{s:null,o:null,h:null},fin:false};
+ if(caso.mode==='x'){const z=()=>Array.from({length:caso.n},()=>Array(caso.n).fill(0));G.marks.L=z();if(caso.obj)G.marks.O=z();if(caso.horas)G.marks.H=z();}
+ document.documentElement.classList.toggle('noche',cap.noche);
+ $('cNum').textContent=dia?'Caso del día · '+dia.fecha:(cfg.mode==='lock'?cap.titulo+' · final':cap.titulo.split(' · ')[0]+' · Caso '+(i+1)+' de '+(cap.niveles.length-1)+' · '+tipoDe(cfg,cap));
+ $('cTit').textContent=cfg.mode==='lock'?cap.final.tit:titulo(caso.robo);
+ $('bPista').style.display=cfg.mode==='lock'?'none':'';
+ pintarCaso();show('caso');}
+const titulo=r=>{const t='El caso de '+r;return t.length>48?t.slice(0,46)+'…':t;};
+function estrellas(){return Math.max(1,3-G.fallos-(G.pista?1:0));}
+function pintarEst(){const e=estrellas();$('cEst').innerHTML='<i>'+'★'.repeat(e)+'</i>'+'☆'.repeat(3-e);}
+function pregunta(c){if(c.mode==='q')return'¿Quién fue?';const o=!!c.obj,h=!!c.horas;
+ return '¿Quién fue'+(o&&h?', qué llevaba y a qué hora llegó?':o?' y qué llevaba?':h?' y a qué hora llegó?':'?');}
+
+function pintarCaso(){
+ pintarEst();const c=G.caso,cw=$('cw'),cap=CAPS[G.cap];
+ if(c.mode==='lock'){pintarCandado();return;}
+ const diario=cap.diario&&!G.dia&&cap.diario[G.i]?`<p class="diario">Diario del inspector: ${cap.diario[G.i]}</p>`:'';
+ const reparto=c.mode==='x'?'Cada sospechoso estaba en un lugar distinto'+(c.obj&&c.horas?', llevaba un objeto distinto y llegó a una hora distinta':c.obj?' y llevaba un objeto distinto':c.horas?' y llegó a una hora distinta':'')+'.':'';
+ const historia=c.mode==='q'
+  ?`${diario}<h3>${pregunta(c)}</h3><p>Ha desaparecido <b>${c.robo}</b>. El culpable huyó corriendo, pero varios vecinos lo vieron. Descarta sospechosos con las pistas hasta que solo quede uno.</p>`
+  :`${diario}<h3>${pregunta(c)}</h3><p>Ha desaparecido <b>${c.robo}</b>. ${reparto} Usa las pistas y la libreta para averiguarlo.</p><span class="lugar">El robo ocurrió ${c.lug[c.cp].en}</span>`
+   +(c.liar?'<div class="regla">Regla: el culpable miente en su declaración. Los inocentes dicen la verdad.</div>':'');
+ const plano=c.adj?`<h3 class="secT">Plano de la feria <small>los puestos están en este orden</small></h3><div class="plano"><span class="ent">Entrada</span><i>›</i>${c.lug.map(l=>`<span class="pst">${l.n}</span>`).join('<i>›</i>')}</div>`:'';
+ const fichas=c.sus.map((s,i)=>`<button class="card${G.off.has(i)?' off':''}" data-s="${i}">${retrato(s)}<b>${s.nombre}</b><small>${s.oficio}</small><div class="tr">${rasgos(s)}</div></button>`).join('');
+ const decl=c.liar?`<h3 class="secT">Declaraciones <small>toca para tacharlas</small></h3><ul class="decl">${c.tests.map((d,k)=>`<li data-d="${k}" class="${G.tachD.has(k)?'tach':''}">${retrato(c.sus[d.i])}<div><b>${c.sus[d.i].nombre} declara:</b><q>${d.t}</q></div></li>`).join('')}</ul>`:'';
+ const pistas=c.clues.map((t,i)=>`<li data-c="${i}" class="${G.tach.has(i)?'tach':''}">${t}</li>`).join('');
+ let libreta='';
+ if(c.mode==='x')libreta='<h3 class="secT">Libreta <small>1 toque: ✕ · 2 toques: ✓ · 3 toques: vacío</small></h3><div class="note">'+tabla('L','Lugares',c.lug.map(l=>l.n))+(c.obj?tabla('O','Objetos',c.obj.map(o=>o.n)):'')+(c.horas?tabla('H','Horas de llegada',c.horas):'')+'</div>';
+ cw.innerHTML=`<div class="scene">${escena(c.escena,cap.noche)}</div><div class="colL"><section class="paper story">${historia}</section>${plano}
+  <h3 class="secT">Sospechosos <small>toca una ficha para descartarla</small></h3><div class="sus">${fichas}</div>${decl}</div>
+  <div class="colR"><h3 class="secT" style="margin-top:0">Pistas <small>toca para tacharlas</small></h3><ol class="clues">${pistas||'<li>No hay más pistas: las declaraciones bastan.</li>'}</ol>${libreta}
+  <div class="acc"><button class="btn rojo" id="bAcusar">Acusar</button></div></div>`;
+ cw.querySelectorAll('.card').forEach(b=>b.onclick=()=>{const i=+b.dataset.s;G.off.has(i)?G.off.delete(i):G.off.add(i);b.classList.toggle('off');sfx.clic();});
+ cw.querySelectorAll('.clues li[data-c]').forEach(li=>li.onclick=()=>{const i=+li.dataset.c;G.tach.has(i)?G.tach.delete(i):G.tach.add(i);li.classList.toggle('tach');sfx.clic();});
+ cw.querySelectorAll('.decl li').forEach(li=>li.onclick=()=>{const i=+li.dataset.d;G.tachD.has(i)?G.tachD.delete(i):G.tachD.add(i);li.classList.toggle('tach');sfx.clic();});
+ cw.querySelectorAll('.grid button').forEach(b=>b.onclick=()=>marcar(b.dataset.g,+b.dataset.r,+b.dataset.c));
+ cw.querySelectorAll('.borrar').forEach(b=>b.onclick=()=>borrar(b.dataset.b));
+ $('bAcusar').onclick=acusar;}
+function tabla(g,nom,cols){const c=G.caso,m=G.marks[g];
+ return `<div class="gBox"><div class="gHead"><span>${nom}</span><button class="borrar" data-b="${g}">Borrar</button></div><table class="grid"><tr><th></th>${cols.map(t=>`<th>${t}</th>`).join('')}</tr>`+
+  c.sus.map((s,r)=>`<tr><th class="rn">${s.nombre}</th>${cols.map((_,k)=>{const v=m[r][k];
+   return `<td><button data-g="${g}" data-r="${r}" data-c="${k}" class="${v===1?'x':v===3?'x a':v===2?'ok':''}" aria-label="${s.nombre} - ${cols[k]}">${v===1||v===3?'✕':v===2?'✓':''}</button></td>`;}).join('')}</tr>`).join('')+'</table></div>';}
+/* 0 vacío · 1 ✕ a mano · 2 ✓ · 3 ✕ automática (se quita sola si se quita su ✓) */
+function recalc(g){const m=G.marks[g],n=m.length;
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(m[r][c]===3)m[r][c]=0;
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(m[r][c]===2)for(let k=0;k<n;k++){if(k!==c&&m[r][k]===0)m[r][k]=3;if(k!==r&&m[k][c]===0)m[k][c]=3;}}
+function marcar(g,r,c,forzar){const m=G.marks[g],v=m[r][c];m[r][c]=forzar??(v===0?1:(v===1||v===3)?2:0);recalc(g);sfx.clic();pintarCaso();}
+function borrar(g){const nom={L:'lugares',O:'objetos',H:'horas'}[g];
+ modal(`<h3>¿Borrar la tabla de ${nom}?</h3><p class="msg">Se quitarán todas las ✕ y ✓ de esa tabla.</p>`,
+ [{t:'Sí, borrar',c:'rojo',f:()=>{G.marks[g]=G.marks[g].map(f=>f.map(()=>0));sfx.clic();pintarCaso();}},{t:'Cancelar',c:'sec'}]);}
+
+function pedirPista(){
+ if(G.fin)return;const c=G.caso;
+ if(c.mode==='q'){const libres=[...Array(c.sus.length).keys()].filter(i=>i!==c.cu&&!G.off.has(i));
+  if(!libres.length){modal('<h3>Sin pistas</h3><p class="msg">Ya has descartado a todos los inocentes.</p>',[{t:'Vale'}]);return;}
+  const k=pick(libres);G.off.add(k);G.pista=true;pintarCaso();
+  modal(`<h3>Pista del inspector</h3><p class="msg"><b>${c.sus[k].nombre}</b> tiene coartada: no pudo ser.</p>`,[{t:'Gracias'}]);return;}
+ const op=[];for(let s=0;s<c.n;s++){if(s===c.cu)continue;
+  if(G.marks.L[s][c.sol.pl[s]]!==2)op.push(['L',s,c.sol.pl[s],`${c.sus[s].nombre} estaba ${c.lug[c.sol.pl[s]].en}`]);
+  if(c.obj&&G.marks.O[s][c.sol.ob[s]]!==2)op.push(['O',s,c.sol.ob[s],`${c.sus[s].nombre} llevaba ${c.obj[c.sol.ob[s]].a}`]);
+  if(c.horas&&G.marks.H[s][c.sol.hr[s]]!==2)op.push(['H',s,c.sol.hr[s],`${c.sus[s].nombre} llegó a las ${c.horas[c.sol.hr[s]]}`]);}
+ if(!op.length){modal('<h3>Sin pistas</h3><p class="msg">Tu libreta ya tiene todo lo que puedo decirte.</p>',[{t:'Vale'}]);return;}
+ const [g,r,k,t]=pick(op);G.pista=true;marcar(g,r,k,2);
+ modal(`<h3>Pista del inspector</h3><p class="msg">${t}. Lo he apuntado en tu libreta.</p>`,[{t:'Gracias'}]);}
+function confirmarPista(){if(G.pista){pedirPista();return;}
+ modal('<h3>¿Usar una pista?</h3><p class="msg">Te ayudará, pero este caso valdrá como máximo 2 estrellas.<br><small style="color:#5d717b">En la versión comercial, las pistas extra se conseguirán viendo un anuncio.</small></p>',
+  [{t:'Sí, ayúdame',f:pedirPista},{t:'No',c:'sec'}]);}
+
+function acusar(){
+ const c=G.caso;G.sel={s:null,o:null,h:null};
+ const html=`<h3>¿A quién acusas?</h3><div class="pickS">${c.sus.map((s,i)=>`<button data-s="${i}" style="${G.off.has(i)?'opacity:.45':''}">${retrato(s)}${s.nombre}</button>`).join('')}</div>`+
+  (c.obj?`<h4>¿Qué llevaba?</h4><div class="pickO" data-g="o">${c.obj.map((o,i)=>`<button data-v="${i}">${o.n}</button>`).join('')}</div>`:'')+
+  (c.horas?`<h4>¿A qué hora llegó?</h4><div class="pickO" data-g="h">${c.horas.map((h,i)=>`<button data-v="${i}">${h}</button>`).join('')}</div>`:'');
+ modal(html,[{t:'Confirmar acusación',c:'rojo',id:'bConf',dis:true,f:resolver},{t:'Cancelar',c:'sec'}]);
+ const upd=()=>{$('bConf').disabled=G.sel.s===null||(c.obj&&G.sel.o===null)||(c.horas&&G.sel.h===null);};
+ document.querySelectorAll('.pickS button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.pickS button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');G.sel.s=+b.dataset.s;sfx.clic();upd();});
+ document.querySelectorAll('.pickO').forEach(w=>w.querySelectorAll('button').forEach(b=>b.onclick=()=>{w.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');G.sel[w.dataset.g]=+b.dataset.v;sfx.clic();upd();}));}
+
+function resolver(){
+ const c=G.caso,{s,o,h}=G.sel;
+ const okS=s===c.cu,okO=!c.obj||o===c.sol.ob[c.cu],okH=!c.horas||h===c.sol.hr[c.cu];
+ if(!(okS&&okO&&okH)){G.fallos++;sfx.mal();pintarEst();
+  const fallo=!okS?`<b>${c.sus[s].nombre}</b> es inocente.`:'Has acertado el culpable, pero '+(!okO&&!okH?'no el objeto ni la hora.':!okO?'no el objeto.':'no la hora de llegada.');
+  modal(`<h3 style="color:var(--rojo)">¡Error, inspector!</h3><p class="msg">${fallo} Repasa las pistas.</p>`,[{t:'Seguir investigando'}]);
+  if(!okS){G.off.add(s);pintarCaso();}return;}
+ const q=c.sus[c.cu];
+ const res=`Fue <b>${q.nombre}</b> (${q.oficio})`+(c.lug?`, que estaba ${c.lug[c.cp].en}`:'')+(c.obj?` con ${c.obj[c.sol.ob[c.cu]].a}`:'')+(c.horas?` y llegó a las ${c.horas[c.sol.hr[c.cu]]}`:'')+'.'
+  +(c.liar?`<br><small style="color:#5d717b">Su declaración era la mentira: «${c.tests.find(d=>d.i===c.cu).t}»</small>`:'');
+ ganar(res);}
+
+function ganar(res){
+ G.fin=true;sfx.bien();const e=estrellas(),i=G.i,cap=CAPS[G.cap],sv=save.caps[G.cap];
+ if(G.dia)save.dia[G.dia.fecha]=Math.max(save.dia[G.dia.fecha]||0,e);
+ else{sv.stars[i]=Math.max(sv.stars[i]||0,e);if(sv.unlocked<i+2&&i+1<cap.niveles.length)sv.unlocked=i+2;}
+ guardar();
+ const ult=!G.dia&&i===cap.niveles.length-1;const bts=[];
+ if(!G.dia&&!ult)bts.push({t:'Siguiente ›',f:()=>empezar(G.cap,i+1,null)});
+ if(ult&&CAPS[G.cap+1])bts.push({t:'Ir al capítulo '+(G.cap+1)+' ›',f:()=>{capSel=G.cap+1;pintarMapa();show('map');}});
+ if(G.cfg.mode!=='lock')bts.push({t:'Otro caso parecido',c:'sec',f:()=>empezar(G.cap,i,Math.floor(Math.random()*1e9),G.dia?{cfg:G.cfg,fecha:G.dia.fecha.replace(' (extra)','')+' (extra)'}:null)});
+ bts.push({t:G.dia?'Inicio':'Mapa',c:'sec',f:()=>{if(G.dia)show('menu');else{capSel=G.cap;pintarMapa();show('map');}}});
+ modal(`<h3 style="color:var(--verde)">${G.cfg.mode==='lock'?'¡Abierto!':'¡Caso resuelto!'}</h3><div class="estr"><i>${'★'.repeat(e)}</i>${'★'.repeat(3-e)}</div><p class="msg">${res}</p>`+
+  (ult?`<p class="msg">${cap.final.fin}</p>`:''),bts);}
+
+/* ================= CANDADO ================= */
+function pintarCandado(){
+ const c=G.caso,cw=$('cw'),cap=CAPS[G.cap],sp=c.spec,simb=sp.tipo!=='cifra';
+ const ver=d=>simb?simbolo(d):d;
+ cw.innerHTML=`<div class="scene">${escena(sp.escena,cap.noche)}</div><div class="colL"><section class="paper story"><h3>${sp.tit}</h3><p>${sp.intro}</p></section>
+  <h3 class="secT">Notas encontradas</h3><div class="lockBox">${c.hints.map(h=>`<div class="hintRow"><div class="dig">${h.g.map(d=>`<span>${ver(d)}</span>`).join('')}</div><p>${textoPista(h.f,sp.tipo)}</p></div>`).join('')}</div></div>
+  <div class="colR"><h3 class="secT" style="margin-top:0">Combinación${simb?' <small>símbolos posibles: '+[...Array(sp.alpha).keys()].map(d=>`<span style="display:inline-block;width:20px;vertical-align:middle">${simbolo(d)}</span>`).join('')+'</small>':''}</h3>
+  <div class="lockBox"><div class="safe">${[...Array(sp.len).keys()].map(k=>`<div class="wheel"><button data-k="${k}" data-d="1" aria-label="Siguiente">▲</button><span id="w${k}">${ver(G.rueda[k])}</span><button data-k="${k}" data-d="-1" aria-label="Anterior">▼</button></div>`).join('')}</div>
+  <button class="btn rojo" id="bAbrir" style="font-size:22px;padding:14px 44px">Abrir</button></div></div>`;
+ cw.querySelectorAll('.wheel button').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;G.rueda[k]=(G.rueda[k]+(+b.dataset.d)+sp.alpha)%sp.alpha;$('w'+k).innerHTML=ver(G.rueda[k]);sfx.tic();});
+ $('bAbrir').onclick=()=>{if(G.rueda.every((d,k)=>d===c.sec[k]))ganar('La combinación era '+c.sec.map(d=>simb?`<span style="display:inline-block;width:28px;vertical-align:middle">${simbolo(d)}</span>`:d).join('')+'.');
+  else{G.fallos++;sfx.mal();pintarEst();modal('<h3 style="color:var(--rojo)">No se abre</h3><p class="msg">Esa combinación no es correcta. Revisa las notas.</p>',[{t:'Seguir'}]);}};}
+
+/* ================= EVENTOS ================= */
+$('bJugar').onclick=()=>{pintarMapa();show('map');};
+$('bMapMenu').onclick=()=>{document.documentElement.classList.remove('noche');show('menu');};
+$('bSon').onclick=()=>setSon(!son);
+$('bPista').onclick=confirmarPista;
+$('bBack').onclick=()=>{if(G&&G.dia){document.documentElement.classList.remove('noche');show('menu');}else{capSel=G.cap;pintarMapa();show('map');}};
+$('bDia').onclick=()=>{const d=new Date(),fecha=d.toLocaleDateString('es-ES');
+ const sd=d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();const capId=sd%2?2:1;const cap=CAPS[capId];
+ const pool=capId===2?cap.niveles.slice(1,12):cap.niveles.slice(5,10);empezar(capId,-1,sd,{cfg:pool[sd%pool.length],fecha});};
+setSon(son);
+
+/* ================= APP INSTALABLE (PWA) ================= */
+const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+let aviso=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();aviso=e;$('instalar').style.display='';});
+$('instalar').onclick=async()=>{if(!aviso)return;aviso.prompt();try{await aviso.userChoice;}catch(e){}aviso=null;$('instalar').style.display='none';};
+window.addEventListener('appinstalled',()=>{$('instalar').style.display='none';});
+const esIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+if(esIOS&&!standalone)$('iosTip').style.display='block';
+}
+</script>
+</body>
+</html>

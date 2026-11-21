@@ -1,0 +1,53 @@
+INSPECTOR LUPA v2.1 — versión instalable (PWA)
+==============================================
+
+Contenido de la carpeta
+-----------------------
+index.html            El juego
+manifest.webmanifest  Nombre, colores e iconos de la app
+sw.js                 Modo sin conexión (guarda el juego en el dispositivo)
+icons/                Iconos de la app (Android, iPhone)
+fonts/                Tipos de letra Fredoka y Patrick Hand (licencia libre SIL OFL, se pueden usar en apps comerciales)
+
+
+Cómo publicarlo en GitHub Pages
+-------------------------------
+1. Entra en github.com, ve a tu organización "novaApps-es" y pulsa "New repository".
+   Nombre: inspector-lupa   ·   Visibilidad: Public   ·   Pulsa "Create repository".
+
+2. En el repositorio vacío, pulsa "uploading an existing file".
+   Arrastra TODO EL CONTENIDO de esta carpeta (no la carpeta en sí):
+   index.html, manifest.webmanifest, sw.js, LEEME.txt y las carpetas fonts e icons.
+   Pulsa "Commit changes".
+
+3. Ve a Settings > Pages.
+   En "Source" elige "Deploy from a branch", rama "main", carpeta "/ (root)" y pulsa "Save".
+
+4. En uno o dos minutos el juego estará en:
+   https://novaapps-es.github.io/inspector-lupa/
+
+
+Cómo instalarlo
+---------------
+ANDROID (Chrome):
+  Abre la dirección. En la portada aparece el botón "Instalar en este dispositivo".
+  Si no aparece: menú de los tres puntos > "Instalar aplicación" (o "Añadir a pantalla de inicio").
+
+IPHONE / IPAD (Safari, obligatorio en iPhone):
+  Abre la dirección en Safari > botón Compartir > "Añadir a pantalla de inicio".
+
+PC (Chrome o Edge):
+  Icono de instalar en la barra de direcciones, o el botón de la portada.
+
+Una vez instalado se abre a pantalla completa con su icono y funciona sin internet.
+Nota: en el iPhone, la partida de la app instalada se guarda aparte de la de Safari.
+
+
+Cómo publicar una versión nueva
+-------------------------------
+1. Sube el nuevo index.html al repositorio (sustituyendo el anterior).
+2. En sw.js, cambia el número de la línea:
+      const CACHE = 'inspector-lupa-v2.1';
+   por la versión nueva (por ejemplo 'inspector-lupa-v2.2') y súbelo también.
+   Sin este cambio, los móviles que ya lo tienen instalado seguirían usando la versión vieja.
+3. La próxima vez que se abra la app con conexión se actualizará sola.
